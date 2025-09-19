@@ -1,0 +1,48 @@
+{
+  "name": "minecraft-custom-recipe-creator",
+  "version": "0.1.0-beta",
+  "description": "Generates Minecraft recipes from written rules",
+  "type": "module",
+  "homepage": "https://github.com/ryanc16/minecraft-custom-recipe-creator",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanc16/minecraft-custom-recipe-creator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ryanc16/minecraft-custom-recipe-creator/issues"
+  },
+  "main": "./index.mjs",
+  "bin": {
+    "mcrc": "./cli.mjs"
+  },
+  "files": [
+    "./index.mjs",
+    "./cli.mjs",
+    "./lib"
+  ],
+  "scripts": {
+    "test": "node ./jasmine.js"
+  },
+  "keywords": [
+    "minecraft",
+    "recipes",
+    "datapack",
+    "generator",
+    "language",
+    "parsing"
+  ],
+  "author": "ryanc16",
+  "license": "GPLv3",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "glob": "^10.4.5",
+    "minecraft-data": "^3.83.1",
+    "moo": "^0.5.2",
+    "yaml": "^2.7.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "jasmine": "^5.5.0",
+    "jasmine-console-reporter": "^3.1.0"
+  }
+}
