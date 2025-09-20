@@ -2,9 +2,6 @@
 import Jasmine from 'jasmine';
 import JasmineConsoleReporter from 'jasmine-console-reporter';
 import toContainKey from './tests/helpers/matchers/toContainKey.js';
-// setup Jasmine
-// const Jasmine = require('jasmine');
-// const toContainKey = require('./tests/helpers/matchers/toContainKey');
 const jasmine = new Jasmine();
 jasmine.loadConfig({
   spec_dir: 'tests',

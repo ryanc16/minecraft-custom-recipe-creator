@@ -16,14 +16,14 @@ import RecipeGenerator from "./lib/recipe_generator.mjs";
 const RECIPES_YML_TEMPLATE = 'variables:\n' +
     '# Define values to use in your rules here!\n' +
     'rules:\n' +
-    '# Add your own custom rules here!';
+    '# Add your own custom rules here as a yaml list!';
 
 async function main(args) {
     // console.debug(args);
     if (args.command === 'init') {
         await initProject(args);
-    } else if (args.command === 'generate') {
-        await generateProject(args);
+    } else if (args.command === 'build') {
+        await buildProject(args);
     }
 }
 
@@ -127,7 +127,7 @@ async function initProject(args) {
     rl.close();
 }
 
-async function generateProject(args) {
+async function buildProject(args) {
     if (!fs.existsSync(path.join(args.projectdir, 'mcrc.json'))) {
         console.error('Couldn\'t find mcrc.json in ' + args.projectdir);
         process.exit(1);
@@ -169,6 +169,7 @@ async function generateProject(args) {
     const buildGeneratedDataDir = path.join(buildDir, 'data');
     fs.mkdirSync(buildGeneratedDataDir, { recursive: true, force: true });
     const generatorsSourceDir = path.join(srcDir, 'data_gen');
+    // glob expects forward slashes / ALWAYS, regardless of OS path separators.
     const generators = globSync(path.join(generatorsSourceDir, '*.{m}js').replace(/\\/g, '/'));
     for (const generator of generators) {
         console.info(`Executing data generator ${generator}`);
@@ -176,7 +177,7 @@ async function generateProject(args) {
         buffer.toString('utf-8').split('\n').forEach(line => console.info(line));
     }
     // glob expects forward slashes / ALWAYS, regardless of OS path separators.
-    const rulesets = globSync(path.join(srcDir, "**", "*.yml").replace(/\\/g, '/'));
+    const rulesets = globSync(path.join(srcDir, "**", "*.{yml,yaml}").replace(/\\/g, '/'));
     let rulecount = 0;
     for (const ruleset of rulesets) {
         console.info(`Parsing rulesheet ${ruleset}`);
@@ -186,11 +187,9 @@ async function generateProject(args) {
             continue;
         }
         rulecount += doc.rules.length;
-        // for (const doc of docs) {
         const generator = new RecipeGenerator(buildGeneratedDataDir, cleanName, mcVersion ? { validate: { version: mcVersion } } : null);
         generator.init();
         await generator.processRules(doc.rules, { variables: doc?.variables });
-        // }
     }
     if (rulecount < 1) {
         return;
@@ -218,33 +217,6 @@ async function generateProject(args) {
     archive.finalize();
 }
 
-async function processDirectory() {
-    const buildDir = path.join(projDir, 'build');
-    const buildGenerationDir = path.join(buildDir, 'generated');
-    const buildGeneratedDataDir = path.join(buildGenerationDir, projConf.name, 'data');
-    fs.mkdirSync(buildGeneratedDataDir, { recursive: true, force: true });
-    const generatorsSourceDir = path.join(projDir, 'src', 'data_gen');
-    const generators = globSync(path.join(generatorsSourceDir, '*.mjs'));
-    for (const generator of generators) {
-        gulplog.info(`Executing data generator ${generator}`);
-        const buffer = execSync(`${nodeBinaryPath} ${generator} -o ${buildGeneratedDataDir}`);
-        buffer.toString('utf-8').split('\n').forEach(line => gulplog.info(line));
-    }
-    const rulesets = globSync(path.join(generatorsSourceDir, "*.yml"));
-    for (const ruleset of rulesets) {
-        gulplog.info(`Parsing ruleset ${ruleset}`);
-        const doc = yaml.parse(fs.readFileSync(ruleset).toString('utf-8'));
-        // for (const doc of docs) {
-        const generator = new RecipeGenerator(buildGeneratedDataDir, projConf.name, { validate: doc.validate ?? {} });
-        generator.init();
-        await captureConsoleInfoInGulpLog(async () => {
-            await generator.processRules(doc.rules, { variables: doc?.variables });
-        });
-        // }
-    }
-}
-
-
 /**
  * Checks if the current ES Module file is being run directly as a CLI command
  * instead of being imported by another file.
@@ -263,13 +235,14 @@ function wasCalledAsScript() {
 
 if (wasCalledAsScript()) {
     const argv = yargs(hideBin(process.argv))
+        .demandCommand(1, 'At least one command is required!')
         .middleware(_argv => {
             if (_argv._.length > 0) {
                 _argv.command = _argv._.shift();
             }
         })
         .usage('Usage: $0 <command> [options] <projectdir>')
-        .command('init', 'Initialize a recipes project interactively. Will prompt for any information that isn\'t provided directly via options.',
+        .command('init <projectdir>', 'Initialize a recipes project interactively. Will prompt for any information that isn\'t provided directly via options.',
             (_yargs) => {
                 return _yargs
                     .usage('Usage: $0 init [options]')
@@ -312,7 +285,7 @@ if (wasCalledAsScript()) {
                         default: false,
                         demandOption: false
                     })
-                    .positional('dir', {
+                    .positional('projectdir', {
                         describe: 'The directory the datapack project will be initialized.',
                         type: 'string',
                         normalize: true,
@@ -340,10 +313,10 @@ if (wasCalledAsScript()) {
                 }
             }
         )
-        .command('generate <projectdir>', 'Process the provided recipe sources.',
+        .command('build <projectdir>', 'Process the available rulsheets in the project and build a datapack.',
             (_yargs) => {
                 return _yargs
-                    .usage('Usage: $0 generate [options] <projectdir>')
+                    .usage('Usage: $0 build [options] <projectdir>')
                     .version(false)
                     .positional('projectdir', {
                         describe: 'A directory containing the mcrc project.',
@@ -365,22 +338,7 @@ if (wasCalledAsScript()) {
                     _argv.projectdir = resolvedPath;
                 }
             }
-        )
-        // .option('out-dir', {
-        //     alias: 'o',
-        //     describe: 'The base directory to output recipe files.\n' +
-        //         'If omitted, the current directory will be used',
-        //     type: 'string',
-        //     demandOption: false
-        // })
-        // .option('name', {
-        //     alias: 'n',
-        //     describe: 'The name of your recipe datapack',
-        //     type: 'string',
-        //     demandOption: 'The datapack name is required!'
-        // })
-
-
+    )
         .help()
         .argv;
     main(argv);
